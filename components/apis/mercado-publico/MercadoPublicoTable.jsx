@@ -1,52 +1,174 @@
+"use client";
+
+import { useState } from "react";
+
 export default function MercadoPublicoTable({
     columns = [],
     rows = [],
     emptyMessage = "No hay datos disponibles.",
+    paginaTamano = 50,
+    labelPlural = "registros",
 }) {
-    return (
-        <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/70">
-            <div className="overflow-x-auto">
-                <table className="min-w-full text-sm text-slate-200">
-                    <thead className="bg-slate-900/80">
-                        <tr>
-                            {columns.map((column) => (
-                                <th
-                                    key={column.key}
-                                    className="px-4 py-3 text-left text-xs uppercase tracking-[0.16em] text-slate-400"
-                                >
-                                    {column.label}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
+    const [pagina, setPagina] = useState(1);
+    const totalPaginas = Math.max(1, Math.ceil(rows.length / paginaTamano));
+    const inicio = (pagina - 1) * paginaTamano;
+    const visibles = rows.slice(inicio, inicio + paginaTamano);
 
-                    <tbody>
-                        {rows.length === 0 ? (
-                            <tr>
-                                <td
-                                    colSpan={columns.length}
-                                    className="px-4 py-10 text-center text-slate-400"
-                                >
-                                    {emptyMessage}
-                                </td>
+    return (
+        <div>
+            {/* Contador */}
+            <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "0.5rem" }}>
+                {rows.length} {labelPlural} · Página {pagina} de {totalPaginas}
+            </p>
+
+            {/* Tabla */}
+            <div style={{
+                borderRadius: "0.75rem",
+                border: "1px solid var(--border)",
+                overflow: "hidden",
+                background: "var(--surface)",
+            }}>
+                <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                        <thead>
+                            <tr style={{ background: "var(--surface-2)" }}>
+                                {columns.map((col) => (
+                                    <th key={col.key} style={{
+                                        padding: "0.65rem 1rem",
+                                        textAlign: "left",
+                                        fontSize: "0.7rem",
+                                        fontWeight: 700,
+                                        letterSpacing: "0.1em",
+                                        textTransform: "uppercase",
+                                        color: "var(--accent)",
+                                        borderBottom: "1px solid var(--border)",
+                                        whiteSpace: "nowrap",
+                                    }}>
+                                        {col.label}
+                                    </th>
+                                ))}
+                                <th style={{
+                                    padding: "0.65rem 1rem",
+                                    textAlign: "right",
+                                    fontSize: "0.7rem",
+                                    fontWeight: 700,
+                                    letterSpacing: "0.1em",
+                                    textTransform: "uppercase",
+                                    color: "var(--accent)",
+                                    borderBottom: "1px solid var(--border)",
+                                }}>
+                                    Acciones
+                                </th>
                             </tr>
-                        ) : (
-                            rows.map((row, index) => (
-                                <tr
-                                    key={row.id ?? index}
-                                    className="border-t border-slate-800/80"
-                                >
-                                    {columns.map((column) => (
-                                        <td key={column.key} className="px-4 py-3 align-top">
-                                            {column.render ? column.render(row) : row[column.key] ?? "—"}
-                                        </td>
-                                    ))}
+                        </thead>
+                        <tbody>
+                            {visibles.length === 0 ? (
+                                <tr>
+                                    <td colSpan={columns.length + 1} style={{
+                                        padding: "2.5rem 1rem",
+                                        textAlign: "center",
+                                        color: "var(--text-muted)",
+                                    }}>
+                                        {emptyMessage}
+                                    </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                            ) : (
+                                visibles.map((row, index) => (
+                                    <tr key={row.id ?? index} style={{
+                                        borderTop: "1px solid var(--border)",
+                                        background: index % 2 === 0 ? "transparent" : "color-mix(in srgb, var(--surface-2) 40%, transparent)",
+                                    }}>
+                                        {columns.map((col) => (
+                                            <td key={col.key} style={{
+                                                padding: "0.65rem 1rem",
+                                                color: "var(--text-secondary)",
+                                                verticalAlign: "middle",
+                                            }}>
+                                                {col.render ? col.render(row) : (row[col.key] ?? "—")}
+                                            </td>
+                                        ))}
+                                        {/* Botón Ver */}
+                                        <td style={{ padding: "0.65rem 1rem", textAlign: "right" }}>
+                                            {row.url ? (
+                                                <a
+                                                    href={row.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: "0.25rem",
+                                                        padding: "0.3rem 0.75rem",
+                                                        borderRadius: "0.4rem",
+                                                        border: "1px solid var(--accent)",
+                                                        color: "var(--accent)",
+                                                        fontSize: "0.75rem",
+                                                        fontWeight: 600,
+                                                        textDecoration: "none",
+                                                        background: "transparent",
+                                                        cursor: "pointer",
+                                                    }}
+                                                >
+                                                    Ver ›
+                                                </a>
+                                            ) : (
+                                                <span style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>—</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
+            {/* Paginación */}
+            {totalPaginas > 1 && (
+                <div style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginTop: "0.75rem",
+                    padding: "0.5rem 0",
+                }}>
+                    <span style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                        Página {pagina} de {totalPaginas}
+                    </span>
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <button
+                            onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                            disabled={pagina === 1}
+                            style={{
+                                padding: "0.3rem 0.75rem",
+                                borderRadius: "0.4rem",
+                                border: "1px solid var(--border)",
+                                background: "var(--surface-2)",
+                                color: pagina === 1 ? "var(--text-muted)" : "var(--text-secondary)",
+                                cursor: pagina === 1 ? "not-allowed" : "pointer",
+                                fontSize: "0.8rem",
+                            }}
+                        >
+                            ‹
+                        </button>
+                        <button
+                            onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                            disabled={pagina === totalPaginas}
+                            style={{
+                                padding: "0.3rem 0.75rem",
+                                borderRadius: "0.4rem",
+                                border: "1px solid var(--border)",
+                                background: "var(--surface-2)",
+                                color: pagina === totalPaginas ? "var(--text-muted)" : "var(--text-secondary)",
+                                cursor: pagina === totalPaginas ? "not-allowed" : "pointer",
+                                fontSize: "0.8rem",
+                            }}
+                        >
+                            ›
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

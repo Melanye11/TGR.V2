@@ -13,19 +13,21 @@ export default function MpSubnav() {
     const pathname = usePathname();
 
     return (
-        <div className="mb-6 flex flex-wrap gap-3">
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1.5rem" }}>
             {items.map((item) => {
                 const active = pathname === item.href;
-
                 return (
-                    <Link
-                        key={item.href}
-                        href={item.href}
-                        className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${active
-                                ? "border-cyan-400 bg-cyan-500/10 text-cyan-300"
-                                : "border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-500 hover:text-white"
-                            }`}
-                    >
+                    <Link key={item.href} href={item.href} style={{
+                        padding: "0.4rem 1rem",
+                        borderRadius: "0.5rem",
+                        border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+                        background: active ? "color-mix(in srgb, var(--accent) 12%, transparent)" : "var(--surface-2)",
+                        color: active ? "var(--accent)" : "var(--text-secondary)",
+                        fontSize: "0.8rem",
+                        fontWeight: active ? 600 : 400,
+                        textDecoration: "none",
+                        transition: "all 150ms ease",
+                    }}>
                         {item.label}
                     </Link>
                 );

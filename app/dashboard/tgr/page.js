@@ -1,4 +1,3 @@
-import DashboardShell from "@/components/layout/DashboardShell";
 import RematesVisualizer from "@/components/apis/tgr/RematesVisualizer";
 import ErrorBanner from "@/components/shared/ErrorBanner";
 import { getRematesActivos } from "@/services/tgr/rematesService";
@@ -15,12 +14,5 @@ export default async function TgrPage() {
         error = "No se pudieron obtener los remates desde TGR. Intente más tarde.";
     }
 
-    return (
-        <DashboardShell
-            titulo="Remates TGR"
-            subtitulo="Listado de remates activos — Tesorería General de la República"
-        >
-            {error ? <ErrorBanner mensaje={error} /> : <RematesVisualizer datos={datos} />}
-        </DashboardShell>
-    );
+    return error ? <ErrorBanner mensaje={error} /> : <RematesVisualizer datos={datos} />;
 }
