@@ -1,5 +1,6 @@
-import { fetchMercadoPublico } from "@/services/mercado-publico/mercadoPublicoClient";
+import { fetchCompraAgilBeta } from "@/services/mercado-publico/compraAgilBetaClient";
 import { mapCompraAgil } from "@/services/mercado-publico/mercadoPublicoMapper";
+import { extraerListado } from "@/lib/mercado-publico/extraerListado";
 
 function getFechaHoy() {
     const hoy = new Date();
@@ -9,37 +10,14 @@ function getFechaHoy() {
     return `${dd}${mm}${yyyy}`;
 }
 
-// Todos los endpoints posibles de Compra Ágil según documentación ChileCompra
-const ENDPOINTS_CANDIDATOS = [
-    "comprasagiles",
-    "compra-agil",
-    "compraagil",
-];
-
-async function fetchConFallback(params) {
-    for (const endpoint of ENDPOINTS_CANDIDATOS) {
-        try {
-            const json = await fetchMercadoPublico(endpoint, params);
-
-            const lista = Array.isArray(json?.ListadoComprasAgiles)
-                ? json.ListadoComprasAgiles
-                : Array.isArray(json?.Listado)
-                    ? json.Listado
-                    : Array.isArray(json?.data)
-                        ? json.data
-                        : Array.isArray(json)
-                            ? json
-                            : null;
-
-            if (lista !== null) return lista;
-        } catch {
-            // intenta el siguiente endpoint
-            continue;
-        }
-    }
-
-    // ningún endpoint funcionó — devuelve vacío sin romper la UI
-    return [];
+function normalizarRespuestaCompraAgilBeta(json) {
+    return extraerListado(json, [
+        "items",
+        "data",
+        "results",
+        "ListadoComprasAgiles",
+        "Listado",
+    ]);
 }
 
 export async function getComprasAgiles({
@@ -49,27 +27,55 @@ export async function getComprasAgiles({
     pagina = 1,
     tamanoPagina = 50,
 } = {}) {
-    const lista = await fetchConFallback({
-        fecha: getFechaHoy(),
-        estado,
-        region,
-        ...(textoBusqueda ? { nombre: textoBusqueda } : {}),
-        cantidad: 1000,
-        pagina: 1,
-    });
+    try {
+        const json = await fetchCompraAgilBeta({
+            fecha: getFechaHoy(),
+            estado,
+            region,
+            q: textoBusqueda,
+            page: pagina,
+            limit: tamanoPagina,
+        });
 
-    const filas = lista.map(mapCompraAgil);
-    const inicio = (pagina - 1) * tamanoPagina;
+        const lista = normalizarRespuestaCompraAgilBeta(json);
+        const filas = lista.map(mapCompraAgil);
 
-    return {
-        filas: filas.slice(inicio, inicio + tamanoPagina),
-        totalRegistros: filas.length,
-        paginaActual: pagina,
-        tamanoPagina,
-        paginacion: Math.max(1, Math.ceil(filas.length / tamanoPagina)),
-        fechaUsada: getFechaHoy(),
-        desdeCache: false,
-    };
+        const totalRegistros =
+            json?.total ??
+            json?.totalRegistros ??
+            json?.pagination?.total ??
+            filas.length;
+
+        const paginacion =
+            json?.totalPages ??
+            json?.pagination?.totalPages ??
+            Math.max(1, Math.ceil(totalRegistros / tamanoPagina));
+
+        return {
+            filas,
+            totalRegistros,
+            paginaActual: pagina,
+            tamanoPagina,
+            paginacion,
+            fechaUsada: getFechaHoy(),
+            desdeCache: false,
+            fuente: "compra-agil-beta",
+        };
+    } catch (error) {
+        console.warn("Compra Ágil Beta no disponible:", error.message);
+
+        return {
+            filas: [],
+            totalRegistros: 0,
+            paginaActual: pagina,
+            tamanoPagina,
+            paginacion: 1,
+            fechaUsada: getFechaHoy(),
+            desdeCache: false,
+            fuente: "compra-agil-beta",
+            error: "Compra Ágil Beta no disponible",
+        };
+    }
 }
 
 export async function listarComprasAgiles(opciones = {}) {

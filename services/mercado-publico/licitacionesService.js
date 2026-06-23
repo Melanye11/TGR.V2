@@ -1,5 +1,6 @@
 import { fetchMercadoPublico } from "@/services/mercado-publico/mercadoPublicoClient";
 import { mapLicitacion } from "@/services/mercado-publico/mercadoPublicoMapper";
+import { extraerListado } from "@/lib/mercado-publico/extraerListado";
 
 function getFechaHoy() {
     const hoy = new Date();
@@ -15,22 +16,13 @@ export async function getLicitaciones({
     pagina = 1,
     tamanoPagina = 50,
 } = {}) {
-    const json = await fetchMercadoPublico("licitaciones", {
+    const json = await fetchMercadoPublico("/licitaciones.json", {
         fecha: getFechaHoy(),
         estado,
         ...(textoBusqueda ? { codigo: textoBusqueda } : {}),
     });
 
-    const lista = Array.isArray(json?.Listado)
-        ? json.Listado
-        : Array.isArray(json?.ListadoLicitaciones)
-            ? json.ListadoLicitaciones
-            : Array.isArray(json?.data)
-                ? json.data
-                : Array.isArray(json)
-                    ? json
-                    : [];
-
+    const lista = extraerListado(json);
     const filas = lista.map(mapLicitacion);
     const inicio = (pagina - 1) * tamanoPagina;
 

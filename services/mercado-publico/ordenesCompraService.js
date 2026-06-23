@@ -1,5 +1,6 @@
 import { fetchMercadoPublico } from "@/services/mercado-publico/mercadoPublicoClient";
 import { mapOrdenCompra } from "@/services/mercado-publico/mercadoPublicoMapper";
+import { extraerListado } from "@/lib/mercado-publico/extraerListado";
 
 function getFechaHoy() {
     const hoy = new Date();
@@ -14,22 +15,15 @@ export async function getOrdenesCompra({
     pagina = 1,
     tamanoPagina = 50,
 } = {}) {
-    const json = await fetchMercadoPublico("OrdenCompra", {
+    const json = await fetchMercadoPublico("/ordenesdecompra.json", {
         ...(codigo ? { codigo } : { fecha: getFechaHoy() }),
     });
 
-    const lista = Array.isArray(json?.Listado)
-        ? json.Listado
-        : Array.isArray(json?.ListadoOrdenesCompra)
-            ? json.ListadoOrdenesCompra
-            : Array.isArray(json?.data)
-                ? json.data
-                : Array.isArray(json)
-                    ? json
-                    : json
-                        ? [json]
-                        : [];
-
+    const lista = extraerListado(json, [
+        "ListadoOC",
+        "ListadoOrdenesCompra",
+        "Listado",
+    ]);
     const filas = lista.map(mapOrdenCompra);
     const inicio = (pagina - 1) * tamanoPagina;
 
