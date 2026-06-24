@@ -20,9 +20,10 @@ export async function GET(request) {
 
         if (error) throw error;
 
-        // 3. EL ADAPTADOR MÁGICO: Traducimos tus columnas limpias a los nombres que espera el diseño
+
         const datosAdaptados = datosSupabase.map(d => ({
             ...d,
+            // Aquí traducimos de tu base de datos (izquierda) a lo que la web espera (derecha)
             comunaJuzgado: d.comuna,
             direccionRol: d.direccion,
             nombreDuegno: d.nombre_dueno,
@@ -30,9 +31,10 @@ export async function GET(request) {
             fechaRemate: d.fecha_remate,
             tasacion: d.monto_minimo,
             avaluo: d.monto_avaluo,
-            // Simulamos el objeto _raw por si el botón "Ver" lo está buscando internamente
-            _raw: { ...d } 
+            rol: d.rol 
         }));
+
+
 
         let resultado = datosAdaptados;
 
