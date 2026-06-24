@@ -47,8 +47,6 @@ export async function GET(request) {
                 tasacion: d.monto_minimo
             })
         }));
-        }));
-
 
 
         let resultado = datosAdaptados;
