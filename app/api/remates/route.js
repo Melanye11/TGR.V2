@@ -1,53 +1,42 @@
 import { NextResponse } from "next/server";
-import {
-    getRematesActivos,
-    invalidarCache,
-    estadoCache,
-} from "@/services/tgr/rematesService";
+import { createClient } from "@supabase/supabase-js";
 
-// ── GET /api/remates ──────────────────────────────────────────────────────────
-//
-// Query params:
-//   ?recargar=1     → fuerza nuevo fetch ignorando caché
-//   ?debug=1        → devuelve metadata de caché + primer registro raw
-//   ?comuna=CURICO  → filtra por comuna (opcional)
-//   ?busqueda=texto → filtra por deudor o dirección (opcional)
-// ─────────────────────────────────────────────────────────────────────────────
+// 1. Conectamos directamente a TU base de datos Supabase (El reproductor de DVD)
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
-
-        const forzar = searchParams.get("recargar") === "1";
-        const debug = searchParams.get("debug") === "1";
         const comuna = searchParams.get("comuna") ?? null;
         const busqueda = searchParams.get("busqueda") ?? null;
 
-        // Invalidar caché si se pide recarga
-        if (forzar) {
-            invalidarCache();
-            console.log("[GET /api/remates] 🔄 Recarga forzada por query param");
-        }
+        // 2. Extraemos los 470 datos limpios de Supabase
+        const { data: datosSupabase, error } = await supabase
+            .from("remates")
+            .select("*");
 
-        // Obtener datos (desde caché o fetch fresco)
-        const datos = await getRematesActivos({ forzarRecarga: forzar });
+        if (error) throw error;
 
-        // ── Modo debug ────────────────────────────────────────────────────────
-        if (debug) {
-            const cache = estadoCache();
-            return NextResponse.json({
-                debug: true,
-                cache: cache,
-                total: datos.length,
-                clavesMapper: datos[0] ? Object.keys(datos[0]).filter((k) => k !== "_raw") : [],
-                clavesRaw: datos[0]?._raw ? Object.keys(datos[0]._raw) : [],
-                primerRegistro: datos[0] ?? null,
-            });
-        }
+        // 3. EL ADAPTADOR MÁGICO: Traducimos tus columnas limpias a los nombres que espera el diseño
+        const datosAdaptados = datosSupabase.map(d => ({
+            ...d,
+            comunaJuzgado: d.comuna,
+            direccionRol: d.direccion,
+            nombreDuegno: d.nombre_dueno,
+            nombreJuzgado: d.tribunal,
+            fechaRemate: d.fecha_remate,
+            tasacion: d.monto_minimo,
+            avaluo: d.monto_avaluo,
+            // Simulamos el objeto _raw por si el botón "Ver" lo está buscando internamente
+            _raw: { ...d } 
+        }));
 
-        // ── Filtros opcionales ────────────────────────────────────────────────
-        let resultado = datos;
+        let resultado = datosAdaptados;
 
+        // 4. Mantenemos el buscador y los filtros de tu compañero intactos
         if (comuna && comuna !== "TODAS") {
             resultado = resultado.filter(
                 (d) => (d.comunaJuzgado ?? "").toUpperCase() === comuna.toUpperCase()
@@ -64,13 +53,13 @@ export async function GET(request) {
             );
         }
 
-        // ── Respuesta ─────────────────────────────────────────────────────────
+        // 5. Entregamos la respuesta exactamente como el Dashboard la espera
         return NextResponse.json(
             {
                 success: true,
                 count: resultado.length,
-                total: datos.length,
-                cache: estadoCache(),
+                total: datosAdaptados.length,
+                cache: { origen: "Supabase Local", estado: "Limpio" }, // Simula caché para que no de error
                 data: resultado,
             },
             {
@@ -83,12 +72,10 @@ export async function GET(request) {
 
     } catch (error) {
         console.error("[GET /api/remates] ❌", error.message);
-
         return NextResponse.json(
             {
                 success: false,
-                error: "Error al obtener remates TGR",
-                detalle: process.env.NODE_ENV === "development" ? error.message : undefined,
+                error: "Error al obtener remates desde Supabase",
             },
             { status: 500 }
         );
