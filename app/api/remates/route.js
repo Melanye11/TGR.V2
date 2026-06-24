@@ -20,18 +20,33 @@ export async function GET(request) {
 
         if (error) throw error;
 
-
         const datosAdaptados = datosSupabase.map(d => ({
-            ...d,
-            // Aquí traducimos de tu base de datos (izquierda) a lo que la web espera (derecha)
-            comunaJuzgado: d.comuna,
-            direccionRol: d.direccion,
+            id: d.id, 
+            rol: d.rol,
             nombreDuegno: d.nombre_dueno,
+            direccionRol: d.direccion,
+            comunaJuzgado: d.comuna,
             nombreJuzgado: d.tribunal,
             fechaRemate: d.fecha_remate,
+            montoAvaluo: d.monto_avaluo,
+            montoMinimo: d.monto_minimo,
+            
+            // Si no los tienes en la tabla, los sacamos del objeto _raw o dejamos null
             tasacion: d.monto_minimo,
             avaluo: d.monto_avaluo,
-            rol: d.rol 
+            rolFormato: d.rol, 
+            tipoDeuda: "TERRITORIAL", 
+            
+            // Esto asegura que el botón "Ver" tenga acceso a todo el objeto original
+            _raw: JSON.stringify({
+                ...d,
+                nombreDuegno: d.nombre_dueno,
+                nombreJuzgado: d.tribunal,
+                fechaRemate: d.fecha_remate,
+                avaluo: d.monto_avaluo,
+                tasacion: d.monto_minimo
+            })
+        }));
         }));
 
 
